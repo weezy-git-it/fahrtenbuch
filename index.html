@@ -88,6 +88,7 @@
       gap: 6px;
     }
 
+    /* Route visual */
     .route-block {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -155,6 +156,7 @@
     }
     .swap-btn:active { transform: translateY(-50%) scale(0.9); background: var(--border); }
 
+    /* Time row */
     .time-block {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -180,18 +182,35 @@
       margin-bottom: 6px;
     }
 
-    .time-cell input {
+    .time-cell input[type="time"] {
       background: transparent;
       border: none;
       outline: none;
       color: var(--text);
       font-family: 'DM Mono', monospace;
-      font-size: 0.9rem;
+      font-size: 1rem;
       width: 100%;
-      -webkit-appearance: none;
+      min-height: 36px;
+      padding: 4px 0;
       color-scheme: dark;
+      cursor: pointer;
     }
 
+    .time-cell input[type="date"] {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      width: 100%;
+      min-height: 36px;
+      padding: 4px 0;
+      color-scheme: dark;
+      cursor: pointer;
+    }
+
+    /* Km + Zweck */
     .detail-block {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -246,6 +265,7 @@
       margin-left: 4px;
     }
 
+    /* Preset buttons */
     .preset-row {
       display: flex;
       gap: 8px;
@@ -272,6 +292,7 @@
       color: #0f0f0d;
     }
 
+    /* Submit button */
     .submit-btn {
       background: var(--accent);
       color: #0f0f0d;
@@ -297,6 +318,7 @@
     .submit-btn.success { background: #4caf50; }
     .submit-btn.error { background: var(--danger); }
 
+    /* Config modal */
     .config-btn {
       background: none;
       border: none;
@@ -479,11 +501,19 @@
       </div>
       <div class="time-cell">
         <label>Startzeit</label>
-        <input type="time" id="startzeit" />
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="startzeit_h" style="flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'DM Mono',monospace; font-size:1rem; -webkit-appearance:none; appearance:none; cursor:pointer; color-scheme:dark;"></select>
+          <span style="color:var(--text-muted);">:</span>
+          <select id="startzeit_m" style="flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'DM Mono',monospace; font-size:1rem; -webkit-appearance:none; appearance:none; cursor:pointer; color-scheme:dark;"></select>
+        </div>
       </div>
       <div class="time-cell">
         <label>Ankunft</label>
-        <input type="time" id="ankunftzeit" />
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="ankunft_h" style="flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'DM Mono',monospace; font-size:1rem; -webkit-appearance:none; appearance:none; cursor:pointer; color-scheme:dark;"></select>
+          <span style="color:var(--text-muted);">:</span>
+          <select id="ankunft_m" style="flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'DM Mono',monospace; font-size:1rem; -webkit-appearance:none; appearance:none; cursor:pointer; color-scheme:dark;"></select>
+        </div>
       </div>
     </div>
   </div>
@@ -572,6 +602,7 @@ const SCRIPT_CODE = `function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
+    // Header anlegen falls leer
     if (sheet.getLastRow() === 0) {
       sheet.appendRow([
         "Datum", "Startzeit", "Ankunftszeit", "Startort", "Zielort",
@@ -624,8 +655,10 @@ function saveConfig() {
 }
 
 function applyConfig() {
+  // Startort
   document.getElementById('startOrt').value = config.startOrt;
 
+  // Ziel-Select befüllen
   const sel = document.getElementById('zielOrt');
   sel.innerHTML = '<option value="">— Ziel wählen —</option>';
   config.ziele.forEach(z => {
@@ -633,10 +666,12 @@ function applyConfig() {
     o.value = z; o.textContent = z;
     sel.appendChild(o);
   });
+  // Weiteres Ziel
   const custom = document.createElement('option');
   custom.value = '__custom__'; custom.textContent = '+ Anderes Ziel…';
   sel.appendChild(custom);
 
+  // Preset-Buttons
   const row = document.getElementById('zielPresets');
   row.innerHTML = '';
   config.ziele.forEach(z => {
@@ -652,16 +687,42 @@ function applyConfig() {
   });
 }
 
+// ─── Datum / Zeit setzen ─────────────────────────────────
+function buildTimeSelects() {
+  ['startzeit_h', 'ankunft_h'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '';
+    for (let h = 0; h < 24; h++) {
+      const o = document.createElement('option');
+      o.value = String(h).padStart(2, '0');
+      o.textContent = String(h).padStart(2, '0');
+      sel.appendChild(o);
+    }
+  });
+  ['startzeit_m', 'ankunft_m'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '';
+    for (let m = 0; m < 60; m += 1) {
+      const o = document.createElement('option');
+      o.value = String(m).padStart(2, '0');
+      o.textContent = String(m).padStart(2, '0');
+      sel.appendChild(o);
+    }
+  });
+}
+
 function setDateTime() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   document.getElementById('datum').value =
     `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  document.getElementById('startzeit').value =
-    `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  document.getElementById('ankunftzeit').value = '';
+  document.getElementById('startzeit_h').value = pad(now.getHours());
+  document.getElementById('startzeit_m').value = pad(now.getMinutes());
+  document.getElementById('ankunft_h').value = pad(now.getHours());
+  document.getElementById('ankunft_m').value = pad(now.getMinutes());
 }
 
+// ─── Swap ─────────────────────────────────────────────────
 function swapOrte() {
   const startInput = document.getElementById('startOrt');
   const zielSel = document.getElementById('zielOrt');
@@ -671,6 +732,7 @@ function swapOrte() {
   const oldStart = startInput.value;
   startInput.value = currentZiel;
 
+  // Prüfen ob alter Start als Option existiert
   const exists = [...zielSel.options].find(o => o.value === oldStart);
   if (!exists) {
     const o = document.createElement('option');
@@ -679,11 +741,13 @@ function swapOrte() {
   }
   zielSel.value = oldStart;
 
+  // Preset-Buttons sync
   document.querySelectorAll('.preset-btn').forEach(b => {
     b.classList.toggle('active', b.textContent === oldStart);
   });
 }
 
+// ─── Ziel Change ─────────────────────────────────────────
 function onZielChange() {
   const sel = document.getElementById('zielOrt');
   const customRow = document.getElementById('customZielRow');
@@ -704,6 +768,7 @@ function confirmCustomZiel() {
   const val = input.value.trim();
   if (!val) return;
   const sel = document.getElementById('zielOrt');
+  // Add as option if not exists
   const exists = [...sel.options].find(o => o.value === val);
   if (!exists) {
     const o = document.createElement('option');
@@ -715,15 +780,19 @@ function confirmCustomZiel() {
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
 }
 
+function onZweckChange() {}
+
+// ─── Auto-resize textarea ────────────────────────────────
 function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = el.scrollHeight + 'px';
 }
 
+// ─── Submit ───────────────────────────────────────────────
 async function submitFahrt() {
   const datum = document.getElementById('datum').value;
-  const startzeit = document.getElementById('startzeit').value;
-  const ankunftzeit = document.getElementById('ankunftzeit').value;
+  const startzeit = document.getElementById('startzeit_h').value + ':' + document.getElementById('startzeit_m').value;
+  const ankunftzeit = document.getElementById('ankunft_h').value + ':' + document.getElementById('ankunft_m').value;
   const startOrt = document.getElementById('startOrt').value.trim();
   const zielOrt = document.getElementById('zielOrt').value;
   const kilometer = document.getElementById('kilometer').value;
@@ -744,6 +813,7 @@ async function submitFahrt() {
   document.getElementById('submitText').textContent = 'Wird gespeichert…';
   document.getElementById('submitIcon').textContent = '⏳';
 
+  // Datum formatiert (DD.MM.YYYY)
   const [y, m, d] = datum.split('-');
   const datumFormatiert = `${d}.${m}.${y}`;
 
@@ -754,6 +824,7 @@ async function submitFahrt() {
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ datum: datumFormatiert, startzeit, ankunftzeit, startOrt, zielOrt, kilometer, zweck, notiz })
     });
+    // no-cors gibt keine lesbare Antwort — wenn kein Fehler geworfen wird, war es erfolgreich
     btn.classList.remove('loading');
     btn.classList.add('success');
     document.getElementById('submitIcon').textContent = '✓';
@@ -785,6 +856,7 @@ function setStatus(msg, type) {
   el.className = 'status-msg' + (type ? ' ' + type : '');
 }
 
+// ─── Config Modal ─────────────────────────────────────────
 function openConfig() {
   document.getElementById('cfgScriptUrl').value = config.scriptUrl;
   document.getElementById('cfgStartOrt').value = config.startOrt;
@@ -808,10 +880,13 @@ function copyScript() {
   });
 }
 
+// ─── Init ─────────────────────────────────────────────────
 loadConfig();
 applyConfig();
+buildTimeSelects();
 setDateTime();
 
+// Außerhalb Modal schließen
 document.getElementById('configModal').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeConfig();
 });
