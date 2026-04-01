@@ -1,1 +1,823 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Fahrtenbuch" />
+  <title>Fahrtenbuch</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f0d;
+      --surface: #1a1a17;
+      --surface2: #242420;
+      --border: #2e2e28;
+      --accent: #c8f060;
+      --accent2: #f0c040;
+      --text: #f0ede6;
+      --text-muted: #7a7a6e;
+      --danger: #ff5c4d;
+      --radius: 14px;
+    }
 
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    }
+
+    header {
+      padding: 28px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.8rem;
+      font-weight: 300;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    header span.dot {
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+      margin-bottom: 4px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    main {
+      flex: 1;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .section-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.14em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .route-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .route-row {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 12px;
+      position: relative;
+    }
+
+    .route-row + .route-row {
+      border-top: 1px solid var(--border);
+    }
+
+    .route-icon {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .route-icon.start { background: #1e2e14; color: var(--accent); }
+    .route-icon.end { background: #2e1e14; color: var(--accent2); }
+
+    .route-content { flex: 1; min-width: 0; }
+
+    .route-content input,
+    .route-content select {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.95rem;
+      width: 100%;
+      padding: 0;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .route-content select option { background: var(--surface2); color: var(--text); }
+
+    .swap-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      transition: all 0.2s;
+      z-index: 2;
+    }
+    .swap-btn:active { transform: translateY(-50%) scale(0.9); background: var(--border); }
+
+    .time-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .time-cell {
+      padding: 14px 16px;
+    }
+
+    .time-cell + .time-cell {
+      border-top: 1px solid var(--border);
+    }
+
+    .time-cell label {
+      display: block;
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .time-cell input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      width: 100%;
+      -webkit-appearance: none;
+      color-scheme: dark;
+    }
+
+    .detail-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 12px;
+    }
+
+    .detail-row + .detail-row { border-top: 1px solid var(--border); }
+
+    .detail-row label {
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      width: 60px;
+      flex-shrink: 0;
+    }
+
+    .detail-row input,
+    .detail-row select,
+    .detail-row textarea {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .detail-row select option { background: var(--surface2); }
+
+    .detail-row textarea {
+      resize: none;
+      height: 20px;
+      overflow: hidden;
+      line-height: 1.4;
+    }
+
+    .km-unit {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    .preset-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.04em;
+    }
+
+    .preset-btn:active,
+    .preset-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0f0f0d;
+    }
+
+    .submit-btn {
+      background: var(--accent);
+      color: #0f0f0d;
+      border: none;
+      border-radius: var(--radius);
+      padding: 18px;
+      font-family: 'Fraunces', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .submit-btn:active { transform: scale(0.98); opacity: 0.9; }
+    .submit-btn.loading { opacity: 0.7; pointer-events: none; }
+    .submit-btn.success { background: #4caf50; }
+    .submit-btn.error { background: var(--danger); }
+
+    .config-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      margin-left: auto;
+      padding: 4px;
+      line-height: 1;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .modal h2 {
+      font-family: 'Fraunces', serif;
+      font-weight: 400;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+    }
+
+    .modal-field {
+      margin-bottom: 16px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .modal-field input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      padding: 12px;
+      width: 100%;
+      outline: none;
+    }
+
+    .modal-field input:focus { border-color: var(--accent); }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      flex: 1;
+      background: var(--accent);
+      border: none;
+      color: #0f0f0d;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .status-msg {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+      min-height: 18px;
+      letter-spacing: 0.04em;
+    }
+
+    .status-msg.ok { color: var(--accent); }
+    .status-msg.err { color: var(--danger); }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    .help-text {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 8px;
+    }
+
+    .help-text a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="dot"></span>
+  <h1>Fahrtenbuch</h1>
+  <button class="config-btn" onclick="openConfig()" title="Einstellungen">⚙</button>
+</header>
+
+<main>
+  <!-- Route -->
+  <div class="field-group">
+    <div class="section-label">Route</div>
+    <div class="route-block">
+      <div class="route-row">
+        <div class="route-icon start">↑</div>
+        <div class="route-content">
+          <input type="text" id="startOrt" placeholder="Startort eingeben…" />
+        </div>
+      </div>
+      <div class="route-row" style="position:relative;">
+        <div class="route-icon end">↓</div>
+        <div class="route-content">
+          <select id="zielOrt" onchange="onZielChange()">
+            <option value="">— Ziel wählen —</option>
+          </select>
+        </div>
+        <button class="swap-btn" onclick="swapOrte()" title="Tauschen">⇅</button>
+      </div>
+    </div>
+
+    <div class="preset-row" id="zielPresets"></div>
+
+    <div id="customZielRow" style="display:none; margin-top:2px;">
+      <div class="detail-block">
+        <div class="detail-row">
+          <label>Ziel</label>
+          <input type="text" id="customZielInput" placeholder="Ziel eingeben…" onkeydown="if(event.key==='Enter') confirmCustomZiel()" />
+          <button onclick="confirmCustomZiel()" style="background:var(--accent);border:none;border-radius:6px;color:#0f0f0d;font-family:'DM Mono',monospace;font-size:0.75rem;padding:4px 10px;cursor:pointer;flex-shrink:0;margin-left:8px;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zeit -->
+  <div class="field-group">
+    <div class="section-label">Zeit</div>
+    <div class="time-block">
+      <div class="time-cell">
+        <label>Datum</label>
+        <input type="date" id="datum" />
+      </div>
+      <div class="time-cell">
+        <label>Startzeit</label>
+        <input type="time" id="startzeit" />
+      </div>
+      <div class="time-cell">
+        <label>Ankunft</label>
+        <input type="time" id="ankunftzeit" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Details -->
+  <div class="field-group">
+    <div class="section-label">Details</div>
+    <div class="detail-block">
+      <div class="detail-row">
+        <label>km</label>
+        <input type="number" id="kilometer" placeholder="0" min="0" step="0.1" inputmode="decimal" />
+        <span class="km-unit">km</span>
+      </div>
+      <div class="detail-row">
+        <label>Zweck</label>
+        <input type="text" id="zweck" placeholder="z.B. Arbeit, Arzt, Privat…" />
+      </div>
+      <div class="detail-row">
+        <label>Notiz</label>
+        <textarea id="notiz" placeholder="Optional…" rows="1" oninput="autoResize(this)"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="submit-btn" id="submitBtn" onclick="submitFahrt()">
+    <span id="submitIcon">＋</span>
+    <span id="submitText">Fahrt eintragen</span>
+  </button>
+
+  <div class="status-msg" id="statusMsg"></div>
+</main>
+
+<!-- Config Modal -->
+<div class="modal-overlay" id="configModal">
+  <div class="modal">
+    <h2>Einstellungen</h2>
+
+    <div class="modal-field">
+      <label>Google Apps Script URL</label>
+      <input type="url" id="cfgScriptUrl" placeholder="https://script.google.com/macros/s/…/exec" />
+    </div>
+
+    <div class="modal-field">
+      <label>Standard-Startort</label>
+      <input type="text" id="cfgStartOrt" placeholder="z.B. Zuhause, Musterstraße 1" />
+    </div>
+
+    <div class="modal-field">
+      <label>Häufige Ziele (kommagetrennt)</label>
+      <input type="text" id="cfgZiele" placeholder="z.B. Büro, Kunde A, Arzt" />
+    </div>
+
+    <div class="help-text">
+      Einrichtung: <strong>1.</strong> Google Sheets erstellen →
+      <strong>2.</strong> Erweiterungen → Apps Script → Code einfügen (siehe unten) →
+      <strong>3.</strong> Deployen als Web-App (Zugriff: Jeder) →
+      <strong>4.</strong> URL hier eintragen.
+      <br><br>
+      <a href="#" onclick="showScriptCode(); return false;">▶ Apps Script Code anzeigen</a>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeConfig()">Abbrechen</button>
+      <button class="btn-primary" onclick="saveConfig()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Script Code Modal -->
+<div class="modal-overlay" id="scriptModal">
+  <div class="modal">
+    <h2>Apps Script Code</h2>
+    <div class="help-text" style="font-size:0.6rem; white-space:pre-wrap; overflow-x:auto;" id="scriptCodeBlock"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="copyScript()">Kopieren</button>
+      <button class="btn-primary" onclick="document.getElementById('scriptModal').classList.remove('open')">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_CODE = `function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        "Datum", "Startzeit", "Ankunftszeit", "Startort", "Zielort",
+        "Kilometer", "Zweck", "Notiz"
+      ]);
+    }
+
+    sheet.appendRow([
+      data.datum,
+      data.startzeit,
+      data.ankunftzeit,
+      data.startOrt,
+      data.zielOrt,
+      data.kilometer,
+      data.zweck,
+      data.notiz
+    ]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({status: "ok"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({status: "error", message: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
+// ─── State ───────────────────────────────────────────────
+let config = {
+  scriptUrl: '',
+  startOrt: 'Zuhause',
+  ziele: ['Büro', 'M43']
+};
+
+function loadConfig() {
+  const saved = localStorage.getItem('fahrtenbuch_config');
+  if (saved) config = {...config, ...JSON.parse(saved)};
+}
+
+function saveConfig() {
+  config.scriptUrl = document.getElementById('cfgScriptUrl').value.trim();
+  config.startOrt = document.getElementById('cfgStartOrt').value.trim() || 'Zuhause';
+  const zielStr = document.getElementById('cfgZiele').value.trim();
+  if (zielStr) config.ziele = zielStr.split(',').map(s => s.trim()).filter(Boolean);
+  localStorage.setItem('fahrtenbuch_config', JSON.stringify(config));
+  applyConfig();
+  closeConfig();
+  setStatus('Einstellungen gespeichert ✓', 'ok');
+}
+
+function applyConfig() {
+  document.getElementById('startOrt').value = config.startOrt;
+
+  const sel = document.getElementById('zielOrt');
+  sel.innerHTML = '<option value="">— Ziel wählen —</option>';
+  config.ziele.forEach(z => {
+    const o = document.createElement('option');
+    o.value = z; o.textContent = z;
+    sel.appendChild(o);
+  });
+  const custom = document.createElement('option');
+  custom.value = '__custom__'; custom.textContent = '+ Anderes Ziel…';
+  sel.appendChild(custom);
+
+  const row = document.getElementById('zielPresets');
+  row.innerHTML = '';
+  config.ziele.forEach(z => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.textContent = z;
+    btn.onclick = () => {
+      document.getElementById('zielOrt').value = z;
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    row.appendChild(btn);
+  });
+}
+
+function setDateTime() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('datum').value =
+    `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  document.getElementById('startzeit').value =
+    `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById('ankunftzeit').value = '';
+}
+
+function swapOrte() {
+  const startInput = document.getElementById('startOrt');
+  const zielSel = document.getElementById('zielOrt');
+  const currentZiel = zielSel.value;
+  if (!currentZiel || currentZiel === '__custom__') return;
+
+  const oldStart = startInput.value;
+  startInput.value = currentZiel;
+
+  const exists = [...zielSel.options].find(o => o.value === oldStart);
+  if (!exists) {
+    const o = document.createElement('option');
+    o.value = oldStart; o.textContent = oldStart;
+    zielSel.insertBefore(o, zielSel.options[1]);
+  }
+  zielSel.value = oldStart;
+
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === oldStart);
+  });
+}
+
+function onZielChange() {
+  const sel = document.getElementById('zielOrt');
+  const customRow = document.getElementById('customZielRow');
+  if (sel.value === '__custom__') {
+    customRow.style.display = 'block';
+    document.getElementById('customZielInput').value = '';
+    setTimeout(() => document.getElementById('customZielInput').focus(), 50);
+  } else {
+    customRow.style.display = 'none';
+  }
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === sel.value);
+  });
+}
+
+function confirmCustomZiel() {
+  const input = document.getElementById('customZielInput');
+  const val = input.value.trim();
+  if (!val) return;
+  const sel = document.getElementById('zielOrt');
+  const exists = [...sel.options].find(o => o.value === val);
+  if (!exists) {
+    const o = document.createElement('option');
+    o.value = val; o.textContent = val;
+    sel.insertBefore(o, sel.lastElementChild);
+  }
+  sel.value = val;
+  document.getElementById('customZielRow').style.display = 'none';
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+async function submitFahrt() {
+  const datum = document.getElementById('datum').value;
+  const startzeit = document.getElementById('startzeit').value;
+  const ankunftzeit = document.getElementById('ankunftzeit').value;
+  const startOrt = document.getElementById('startOrt').value.trim();
+  const zielOrt = document.getElementById('zielOrt').value;
+  const kilometer = document.getElementById('kilometer').value;
+  const zweck = document.getElementById('zweck').value;
+  const notiz = document.getElementById('notiz').value.trim();
+
+  if (!datum || !startOrt || !zielOrt || zielOrt === '__custom__') {
+    setStatus('Bitte Datum, Start- und Zielort angeben.', 'err');
+    return;
+  }
+  if (!config.scriptUrl) {
+    setStatus('Bitte zuerst die Script-URL in ⚙ Einstellungen eintragen.', 'err');
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.classList.add('loading');
+  document.getElementById('submitText').textContent = 'Wird gespeichert…';
+  document.getElementById('submitIcon').textContent = '⏳';
+
+  const [y, m, d] = datum.split('-');
+  const datumFormatiert = `${d}.${m}.${y}`;
+
+  try {
+    await fetch(config.scriptUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ datum: datumFormatiert, startzeit, ankunftzeit, startOrt, zielOrt, kilometer, zweck, notiz })
+    });
+    btn.classList.remove('loading');
+    btn.classList.add('success');
+    document.getElementById('submitIcon').textContent = '✓';
+    document.getElementById('submitText').textContent = 'Eingetragen!';
+    setStatus(`${datumFormatiert} · ${startOrt} → ${zielOrt}`, 'ok');
+    setDateTime();
+    setTimeout(() => {
+      btn.classList.remove('success');
+      document.getElementById('submitIcon').textContent = '＋';
+      document.getElementById('submitText').textContent = 'Fahrt eintragen';
+    }, 2000);
+  } catch (err) {
+    btn.classList.remove('loading');
+    btn.classList.add('error');
+    document.getElementById('submitIcon').textContent = '✗';
+    document.getElementById('submitText').textContent = 'Fehler';
+    setStatus('Fehler: ' + err.message, 'err');
+    setTimeout(() => {
+      btn.classList.remove('error');
+      document.getElementById('submitIcon').textContent = '＋';
+      document.getElementById('submitText').textContent = 'Fahrt eintragen';
+    }, 3000);
+  }
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg' + (type ? ' ' + type : '');
+}
+
+function openConfig() {
+  document.getElementById('cfgScriptUrl').value = config.scriptUrl;
+  document.getElementById('cfgStartOrt').value = config.startOrt;
+  document.getElementById('cfgZiele').value = config.ziele.join(', ');
+  document.getElementById('configModal').classList.add('open');
+}
+
+function closeConfig() {
+  document.getElementById('configModal').classList.remove('open');
+}
+
+function showScriptCode() {
+  document.getElementById('scriptCodeBlock').textContent = SCRIPT_CODE;
+  document.getElementById('scriptModal').classList.add('open');
+}
+
+function copyScript() {
+  navigator.clipboard.writeText(SCRIPT_CODE).then(() => {
+    setStatus('Code kopiert!', 'ok');
+    document.getElementById('scriptModal').classList.remove('open');
+  });
+}
+
+loadConfig();
+applyConfig();
+setDateTime();
+
+document.getElementById('configModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeConfig();
+});
+document.getElementById('scriptModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+</script>
+</body>
+</html>
